@@ -1162,3 +1162,48 @@ def get_report_arrays(name):
     r = HfssReport(d, name)
     return r.get_arrays()
 
+
+class Variation(dict):
+
+    @staticmethod
+    def variation_to_dict(variation):
+        d = {}
+        variables = variation.split(' ')
+        for variable in variables:
+            split_variable = variable.split('=')
+            name = split_variable[0]
+            val = split_variable[1].strip('\'')
+            d[name] = val
+        return d 
+    
+    def __init__(self, variation):
+        try:
+            dict_variation = self.variation_to_dict(variation)
+            self._variation_str = variation
+            super().__init__(dict_variation)
+        except:
+            raise ValueError('Input must be HFSS variation string')
+            
+    def __sub__(self, other):
+        k1 = self.keys()
+        k2 = other.keys()
+        assert set(k1) == set(k2), 'Variations do not share all variable names'
+        diff = {}
+        for k in self:
+            if self[k] != other[k]:
+                diff[k] = self[k]
+        return diff
+    
+    def __truediv__(self, other):
+        keys_diff = {}
+        for k in self:
+            if k not in other:
+                keys_diff[k] = self[k]
+        return keys_diff
+    
+    def __hash__(self):
+        return hash(self._variation_str)
+
+    
+    def is_in(self, k, v):
+        return self[k] == v
