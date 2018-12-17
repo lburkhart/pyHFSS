@@ -12,6 +12,7 @@ import time
 from sympy.parsing import sympy_parser
 from pint import UnitRegistry
 from win32com.client import Dispatch, CDispatch
+import matplotlib.pyplot as plt
 
 ureg = UnitRegistry()
 Q = ureg.Quantity
