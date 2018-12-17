@@ -660,6 +660,9 @@ class HfssDesignSolutions(COMWrapper):
         super(HfssDesignSolutions, self).__init__()
         self.parent = setup
         self._solutions = solutions
+        variations = self._solutions.ListVariations(self.parent.solution_name)
+        self.variations = list(map(Variation, variations))
+        self.gathered_all = False
 
 class HfssEMDesignSolutions(HfssDesignSolutions):
     def eigenmodes(self):
@@ -679,7 +682,61 @@ class HfssEMDesignSolutions(HfssDesignSolutions):
         )
 
 class HfssDMDesignSolutions(HfssDesignSolutions):
-    pass
+
+    def __init__(self, *args, **kwargs):
+        super(HfssDMDesignSolutions, self).__init__(*args, **kwargs)
+        self.results = {}
+        
+    def get_all_solutions(self, *args, **kwargs):
+        if not self.gathered_all:
+            for variation in self.variations:
+                sol_data = self.get_solution_data(variation=variation._variation_str, *args, **kwargs)
+                self.results[variation] = sol_data
+        self.gathered_all = True
+
+    def get_solution_data(self, variation=None, **kwargs):
+        if variation is None:
+            variation = self.variations[0]
+        if isinstance(variation, Variation):
+            variation_key = variation._variation_str
+        else:
+            variation_key = variation
+        if variation in self.results:
+            return self.results[variation]
+
+        excluded_sweeps = kwargs.get('excluded', [])
+        design = self.parent.parent
+        ports = design.get_excitations()[::2]
+        n_ports = len(ports)
+        default_network_str = ','.join(('Z{}{}'.format(i,j) for i in range(1,1+n_ports) for j in range(1,1+n_ports)))
+        network_str = kwargs.get('network_str', default_network_str)
+        sweep_names = self.parent.get_sweep_names()
+        n_sweeps = len(sweep_names) - len(excluded_sweeps)
+        sweep_datas = []
+        for sweep_name in sweep_names:
+            if sweep_name not in excluded_sweeps:
+                sweep = self.parent.get_sweep(sweep_name)
+                sweep_data = sweep.get_network_data(network_str, variation=variation_key)
+                sweep_datas.append(sweep_data)
+        freqs = numpy.concatenate(tuple(sweep_datas[i][0] for i in range(n_sweeps)))
+        zs = numpy.array( numpy.concatenate( tuple( sweep_datas[i][1] for i in range(n_sweeps) ), axis=1 ) )
+        self.results[variation] = (freqs, zs)
+        return freqs, zs
+
+    def plot_solution(self, variation=None):
+        if variation == None:
+            variation = self.variations[0]
+        if variation in self.results:
+            fs, zs = self.results[variation]
+        else:
+            fs, zs = self.get_sultion_data(variation=variation)
+
+        fig, ax = plt.subplots()
+        ax.plot(fs, zs[0].imag)
+        ax.set_xlabel('f (GHz)')
+        ax.set_ylabel('Im(Z) (Ohm)')
+        return fig, ax
+
 
 class HfssFrequencySweep(COMWrapper):
     prop_tab = "HfssTab"
