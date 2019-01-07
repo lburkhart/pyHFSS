@@ -772,7 +772,7 @@ class HfssFrequencySweep(COMWrapper):
     def analyze_sweep(self):
         self.parent.analyze(self.solution_name)
         
-    def get_network_data(self, formats):
+    def get_network_data(self, formats, variation=[]):
         if isinstance(formats, str):
             formats = formats.split(",")
         formats = [f.upper() for f in formats]
@@ -789,7 +789,7 @@ class HfssFrequencySweep(COMWrapper):
             if list:
                 fn = tempfile.mktemp()
                 self.parent._solutions.ExportNetworkData(
-                    [],  self.parent.name + " : " + self.name,
+                    variation,  self.parent.name + " : " + self.name,
                       2, fn, ["all"], False, 0,
                       data_type, -1, 1, 15
                 )
