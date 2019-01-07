@@ -1231,8 +1231,26 @@ def get_report_arrays(name):
     return r.get_arrays()
 
 
-class Variation(dict):
+class Qdict(dict):
+    '''
+    Dictionary where values are ureg.Quantity objects
+    just for nice printing
+    '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.show_dict = {}
+        for k, v in self.items():
+            self.show_dict[k] = str(v)
 
+    def __repr__(self):
+        return repr(self.show_dict)
+
+class Variation(Qdict):
+    '''
+    Dictionary of the variables in a given variation
+    Implements methods for comparing variations
+    retains HFSS-style string, self._variation_str
+    '''
     @staticmethod
     def variation_to_dict(variation):
         d = {}
@@ -1241,18 +1259,25 @@ class Variation(dict):
             split_variable = variable.split('=')
             name = split_variable[0]
             val = split_variable[1].strip('\'')
-            d[name] = val
+            q = Q(val)
+            d[name] = q
         return d 
     
     def __init__(self, variation):
         try:
             dict_variation = self.variation_to_dict(variation)
-            self._variation_str = variation
-            super().__init__(dict_variation)
         except:
             raise ValueError('Input must be HFSS variation string')
+        self._variation_str = variation
+        super().__init__(dict_variation)
             
     def __sub__(self, other):
+        '''
+        overloads '-' operator
+        returns a dict of items where values differ
+        requires that both Variations share all the same variable names
+        for finding diff of item keys, use __truediv__
+        '''
         k1 = self.keys()
         k2 = other.keys()
         assert set(k1) == set(k2), 'Variations do not share all variable names'
@@ -1263,6 +1288,10 @@ class Variation(dict):
         return diff
     
     def __truediv__(self, other):
+        '''
+        overloads '/' operator
+        returns a dict of items not present in other
+        '''
         keys_diff = {}
         for k in self:
             if k not in other:
@@ -1272,6 +1301,9 @@ class Variation(dict):
     def __hash__(self):
         return hash(self._variation_str)
 
-    
     def is_in(self, k, v):
+        '''
+        for checking if v is the value of variable k in this variation
+        currently assumes v is a Quantity, which is maybe not super useful
+        '''
         return self[k] == v
