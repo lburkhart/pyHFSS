@@ -694,6 +694,7 @@ class HfssDMDesignSolutions(HfssDesignSolutions):
                 sol_data = self.get_solution_data(variation=variation._variation_str, *args, **kwargs)
                 self.results[variation] = sol_data
         self.gathered_all = True
+        print('Data gathered for all solutions')
 
     def get_solution_data(self, variation=None, **kwargs):
         if variation is None:
@@ -724,18 +725,27 @@ class HfssDMDesignSolutions(HfssDesignSolutions):
         self.results[variation] = (freqs, zs)
         return freqs, zs
 
-    def plot_solution(self, variation=None):
+    def plot_solution(self, variation=None, ax=None, key_name=None):
         if variation == None:
             variation = self.variations[0]
         if variation in self.results:
             fs, zs = self.results[variation]
         else:
-            fs, zs = self.get_sultion_data(variation=variation)
+            fs, zs = self.get_solution_data(variation=variation)
 
-        fig, ax = plt.subplots()
-        ax.plot(fs, zs[0].imag)
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.figure
+        if key_name is not None:
+            label = '{} = {}'.format(key_name, variation[key_name])
+        else:
+            label = ''
+        ax.plot(fs, zs[0].imag, label=label)
         ax.set_xlabel('f (GHz)')
         ax.set_ylabel('Im(Z) (Ohm)')
+        ax.legend()
+
         return fig, ax
 
 
